@@ -8,10 +8,733 @@ datasource db {
   provider = "postgresql"
 }
 
+enum EstadoGeneral {
+  ACTIVO
+  INACTIVO
+}
+
+enum TipoMovimientoInventario {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+enum EstadoOrdenProduccion {
+  PLANIFICADA
+  EN_PROCESO
+  COMPLETADA
+  CANCELADA
+}
+
+enum EstadoOrdenCompra {
+  SOLICITADA
+  APROBADA
+  RECIBIDA
+  CANCELADA
+}
+
+enum EstadoVenta {
+  PENDIENTE
+  FACTURADA
+  ANULADA
+}
+
+enum TipoAsiento {
+  DEBE
+  HABER
+}
+
+model Empresa {
+  id          String   @id @default(uuid())
+  nit         String   @unique
+  razonSocial String
+  direccion   String?
+  telefono    String?
+  email       String?
+  estado      EstadoGeneral @default(ACTIVO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  usuarios         Usuario[]
+  roles            Rol[]
+  productos        Producto[]
+  materiasPrimas   MateriaPrima[]
+  clientes         Cliente[]
+  proveedores      Proveedor[]
+  almacenes        Almacen[]
+  categorias       Categoria[]
+  unidadesMedida   UnidadMedida[]
+  empleados        Empleado[]
+  cargos           Cargo[]
+  turnos           Turno[]
+  cuentasContables CuentaContable[]
+  lotes            Lote[]
+  stocks           Stock[]
+  movimientos      MovimientoInventario[]
+  boms             BOM[]
+  ordenesProduccion OrdenProduccion[]
+  ordenesCompra    OrdenCompra[]
+  ventas           Venta[]
+  facturas         Factura[]
+  asientosContables AsientoContable[]
+  registrosHoras   RegistroHoras[]
+
+  @@map("empresa")
+}
+
 model Usuario {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id           String   @id @default(uuid())
+  idEmpresa    String
+  nombre       String
+  email        String   @unique
+  passwordHash String
+  estado       EstadoGeneral @default(ACTIVO)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  empresa      Empresa      @relation(fields: [idEmpresa], references: [id])
+  usuarioRoles UsuarioRol[]
+
+  @@index([idEmpresa])
+  @@map("usuario")
+}
+
+model Rol {
+  id          String   @id @default(uuid())
+  idEmpresa   String
+  nombre      String
+  descripcion String?
+  estado      EstadoGeneral @default(ACTIVO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  empresa      Empresa      @relation(fields: [idEmpresa], references: [id])
+  usuarioRoles UsuarioRol[]
+  rolPermisos  RolPermiso[]
+
+  @@unique([idEmpresa, nombre])
+  @@index([idEmpresa])
+  @@map("rol")
+}
+
+model Permiso {
+  id          String   @id @default(uuid())
+  codigo      String   @unique
+  nombre      String
+  descripcion String?
+  estado      EstadoGeneral @default(ACTIVO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  rolPermisos RolPermiso[]
+
+  @@map("permiso")
+}
+
+model UsuarioRol {
+  idUsuario  String
+  idRol      String
+  asignadoEn DateTime @default(now())
+
+  usuario Usuario @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  rol     Rol     @relation(fields: [idRol], references: [id], onDelete: Cascade)
+
+  @@id([idUsuario, idRol])
+  @@map("usuario_rol")
+}
+
+model RolPermiso {
+  idRol      String
+  idPermiso  String
+  asignadoEn DateTime @default(now())
+
+  rol     Rol     @relation(fields: [idRol], references: [id], onDelete: Cascade)
+  permiso Permiso @relation(fields: [idPermiso], references: [id], onDelete: Cascade)
+
+  @@id([idRol, idPermiso])
+  @@map("rol_permiso")
+}
+
+model Categoria {
+  id          String   @id @default(uuid())
+  idEmpresa   String
+  nombre      String
+  descripcion String?
+  estado      EstadoGeneral @default(ACTIVO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  empresa       Empresa        @relation(fields: [idEmpresa], references: [id])
+  productos     Producto[]
+  materiasPrimas MateriaPrima[]
+
+  @@unique([idEmpresa, nombre])
+  @@index([idEmpresa])
+  @@map("categoria")
+}
+
+model UnidadMedida {
+  id           String   @id @default(uuid())
+  idEmpresa    String
+  nombre       String
+  abreviatura  String?
+  estado       EstadoGeneral @default(ACTIVO)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  empresa       Empresa        @relation(fields: [idEmpresa], references: [id])
+  productos     Producto[]     @relation("ProductoUnidadMedida")
+  materiasPrimas MateriaPrima[] @relation("MateriaPrimaUnidadMedida")
+
+  @@unique([idEmpresa, nombre])
+  @@index([idEmpresa])
+  @@map("unidad_medida")
+}
+
+model Producto {
+  id              String   @id @default(uuid())
+  idEmpresa       String
+  codigo          String
+  nombre          String
+  descripcion     String?
+  idCategoria     String?
+  idUnidadMedida  String?
+  precioVenta     Decimal  @default(0)
+  costoEstandar   Decimal  @default(0)
+  stockMinimo     Decimal  @default(0)
+  estado          EstadoGeneral @default(ACTIVO)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  empresa              Empresa        @relation(fields: [idEmpresa], references: [id])
+  categoria            Categoria?     @relation(fields: [idCategoria], references: [id])
+  unidadMedida         UnidadMedida?  @relation("ProductoUnidadMedida", fields: [idUnidadMedida], references: [id])
+  stocks               Stock[]
+  movimientos          MovimientoInventario[]
+  produccionesTerminadas ProduccionTerminada[]
+  ordenesProduccion    OrdenProduccion[]
+  detallesVenta        DetalleVenta[]
+  boms                 BOM[]
+
+  @@unique([idEmpresa, codigo])
+  @@index([idEmpresa])
+  @@index([idCategoria])
+  @@map("producto")
+}
+
+model MateriaPrima {
+  id              String   @id @default(uuid())
+  idEmpresa       String
+  codigo          String
+  nombre          String
+  descripcion     String?
+  idCategoria     String?
+  idUnidadMedida  String?
+  costoUnitario   Decimal  @default(0)
+  stockMinimo     Decimal  @default(0)
+  estado          EstadoGeneral @default(ACTIVO)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  empresa       Empresa        @relation(fields: [idEmpresa], references: [id])
+  categoria     Categoria?     @relation(fields: [idCategoria], references: [id])
+  unidadMedida  UnidadMedida?  @relation("MateriaPrimaUnidadMedida", fields: [idUnidadMedida], references: [id])
+  lotes         Lote[]
+  stocks        Stock[]
+  movimientos   MovimientoInventario[]
+  consumos      ConsumoMateriaPrima[]
+  detallesCompra DetalleCompra[]
+  recepciones   RecepcionCompra[]
+  bomDetalles   BOMDetalle[]
+
+  @@unique([idEmpresa, codigo])
+  @@index([idEmpresa])
+  @@map("materia_prima")
+}
+
+model Lote {
+  id               String   @id @default(uuid())
+  idEmpresa        String
+  idMateriaPrima   String
+  numeroLote       String
+  fechaVencimiento DateTime?
+  cantidadInicial  Decimal
+  cantidadActual   Decimal
+  estado           EstadoGeneral @default(ACTIVO)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+
+  empresa      Empresa      @relation(fields: [idEmpresa], references: [id])
+  materiaPrima MateriaPrima @relation(fields: [idMateriaPrima], references: [id])
+  movimientos  MovimientoInventario[]
+  consumos     ConsumoMateriaPrima[]
+
+  @@unique([idEmpresa, numeroLote])
+  @@index([idEmpresa, idMateriaPrima])
+  @@map("lote")
+}
+
+model Almacen {
+  id        String   @id @default(uuid())
+  idEmpresa String
   nombre    String
+  ubicacion String?
+  estado    EstadoGeneral @default(ACTIVO)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  empresa    Empresa    @relation(fields: [idEmpresa], references: [id])
+  stocks     Stock[]
+  movimientos MovimientoInventario[]
+
+  @@unique([idEmpresa, nombre])
+  @@index([idEmpresa])
+  @@map("almacen")
+}
+
+model Stock {
+  id             String   @id @default(uuid())
+  idEmpresa      String
+  idAlmacen      String
+  idProducto     String?
+  idMateriaPrima String?
+  cantidad       Decimal  @default(0)
+  updatedAt      DateTime @updatedAt
+
+  empresa      Empresa       @relation(fields: [idEmpresa], references: [id])
+  almacen      Almacen       @relation(fields: [idAlmacen], references: [id])
+  producto     Producto?     @relation(fields: [idProducto], references: [id])
+  materiaPrima MateriaPrima? @relation(fields: [idMateriaPrima], references: [id])
+
+  @@unique([idEmpresa, idAlmacen, idProducto, idMateriaPrima])
+  @@index([idEmpresa, idAlmacen])
+  @@map("stock")
+}
+
+model MovimientoInventario {
+  id             String   @id @default(uuid())
+  idEmpresa      String
+  idAlmacen      String
+  idProducto     String?
+  idMateriaPrima String?
+  idLote         String?
+  tipo           TipoMovimientoInventario
+  cantidad       Decimal
+  fecha          DateTime @default(now())
+  referencia     String?
+  observaciones  String?
+  createdAt      DateTime @default(now())
+
+  empresa      Empresa       @relation(fields: [idEmpresa], references: [id])
+  almacen      Almacen       @relation(fields: [idAlmacen], references: [id])
+  producto     Producto?     @relation(fields: [idProducto], references: [id])
+  materiaPrima MateriaPrima? @relation(fields: [idMateriaPrima], references: [id])
+  lote         Lote?         @relation(fields: [idLote], references: [id])
+
+  @@index([idEmpresa, fecha])
+  @@index([idAlmacen])
+  @@map("movimiento_inventario")
+}
+
+model BOM {
+  id          String   @id @default(uuid())
+  idEmpresa   String
+  idProducto  String
+  nombre      String
+  descripcion String?
+  version     Int      @default(1)
+  estado      EstadoGeneral @default(ACTIVO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  empresa  Empresa  @relation(fields: [idEmpresa], references: [id])
+  producto Producto @relation(fields: [idProducto], references: [id])
+  detalles          BOMDetalle[]
+  ordenesProduccion OrdenProduccion[]
+
+  @@unique([idEmpresa, idProducto, version])
+  @@index([idEmpresa])
+  @@map("bom")
+}
+
+model BOMDetalle {
+  id             String   @id @default(uuid())
+  idBOM          String
+  idMateriaPrima String
+  cantidad       Decimal
+  unidadMedida   String?
+  secuencia      Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bom          BOM          @relation(fields: [idBOM], references: [id], onDelete: Cascade)
+  materiaPrima MateriaPrima @relation(fields: [idMateriaPrima], references: [id])
+
+  @@index([idBOM])
+  @@map("bom_detalle")
+}
+
+model OrdenProduccion {
+  id                  String   @id @default(uuid())
+  idEmpresa           String
+  idProducto          String
+  idBOM               String?
+  cantidadPlanificada Decimal
+  cantidadProducida   Decimal  @default(0)
+  fechaInicio         DateTime?
+  fechaFin            DateTime?
+  estado              EstadoOrdenProduccion @default(PLANIFICADA)
+  observaciones       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  deletedAt           DateTime?
+
+  empresa    Empresa    @relation(fields: [idEmpresa], references: [id])
+  producto   Producto   @relation(fields: [idProducto], references: [id])
+  bom        BOM?       @relation(fields: [idBOM], references: [id])
+  consumos   ConsumoMateriaPrima[]
+  terminadas ProduccionTerminada[]
+
+  @@index([idEmpresa, estado])
+  @@index([idProducto])
+  @@map("orden_produccion")
+}
+
+model ConsumoMateriaPrima {
+  id                String   @id @default(uuid())
+  idOrdenProduccion String
+  idMateriaPrima    String
+  idLote            String?
+  cantidad          Decimal
+  fecha             DateTime @default(now())
+  observaciones     String?
+  createdAt         DateTime @default(now())
+
+  ordenProduccion OrdenProduccion @relation(fields: [idOrdenProduccion], references: [id])
+  materiaPrima    MateriaPrima    @relation(fields: [idMateriaPrima], references: [id])
+  lote            Lote?           @relation(fields: [idLote], references: [id])
+
+  @@index([idOrdenProduccion])
+  @@map("consumo_materia_prima")
+}
+
+model ProduccionTerminada {
+  id                String   @id @default(uuid())
+  idOrdenProduccion String
+  idProducto        String
+  cantidad          Decimal
+  fecha             DateTime @default(now())
+  observaciones     String?
+  createdAt         DateTime @default(now())
+
+  ordenProduccion OrdenProduccion @relation(fields: [idOrdenProduccion], references: [id])
+  producto        Producto        @relation(fields: [idProducto], references: [id])
+
+  @@index([idOrdenProduccion])
+  @@map("produccion_terminada")
+}
+
+model Proveedor {
+  id        String   @id @default(uuid())
+  idEmpresa String
+  nombre    String
+  nit       String?
+  direccion String?
+  telefono  String?
+  email     String?
+  estado    EstadoGeneral @default(ACTIVO)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  empresa       Empresa       @relation(fields: [idEmpresa], references: [id])
+  ordenesCompra OrdenCompra[]
+
+  @@unique([idEmpresa, nit])
+  @@index([idEmpresa])
+  @@map("proveedor")
+}
+
+model OrdenCompra {
+  id           String   @id @default(uuid())
+  idEmpresa    String
+  idProveedor  String
+  fecha        DateTime @default(now())
+  fechaEntrega DateTime?
+  estado       EstadoOrdenCompra @default(SOLICITADA)
+  total        Decimal  @default(0)
+  observaciones String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  empresa    Empresa    @relation(fields: [idEmpresa], references: [id])
+  proveedor  Proveedor  @relation(fields: [idProveedor], references: [id])
+  detalles   DetalleCompra[]
+  recepciones RecepcionCompra[]
+
+  @@index([idEmpresa, estado])
+  @@index([idProveedor])
+  @@map("orden_compra")
+}
+
+model DetalleCompra {
+  id             String   @id @default(uuid())
+  idOrdenCompra  String
+  idMateriaPrima String
+  cantidad       Decimal
+  precioUnitario Decimal
+  subtotal       Decimal
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  ordenCompra  OrdenCompra  @relation(fields: [idOrdenCompra], references: [id], onDelete: Cascade)
+  materiaPrima MateriaPrima @relation(fields: [idMateriaPrima], references: [id])
+
+  @@index([idOrdenCompra])
+  @@map("detalle_compra")
+}
+
+model RecepcionCompra {
+  id               String   @id @default(uuid())
+  idOrdenCompra    String
+  idMateriaPrima   String
+  cantidadRecibida Decimal
+  fecha            DateTime @default(now())
+  observaciones    String?
+  createdAt        DateTime @default(now())
+
+  ordenCompra  OrdenCompra  @relation(fields: [idOrdenCompra], references: [id])
+  materiaPrima MateriaPrima @relation(fields: [idMateriaPrima], references: [id])
+
+  @@index([idOrdenCompra])
+  @@map("recepcion_compra")
+}
+
+model Cliente {
+  id        String   @id @default(uuid())
+  idEmpresa String
+  nombre    String
+  nit       String?
+  direccion String?
+  telefono  String?
+  email     String?
+  estado    EstadoGeneral @default(ACTIVO)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  empresa Empresa @relation(fields: [idEmpresa], references: [id])
+  ventas  Venta[]
+
+  @@unique([idEmpresa, nit])
+  @@index([idEmpresa])
+  @@map("cliente")
+}
+
+model Venta {
+  id           String   @id @default(uuid())
+  idEmpresa    String
+  idCliente    String
+  fecha        DateTime @default(now())
+  estado       EstadoVenta @default(PENDIENTE)
+  total        Decimal  @default(0)
+  observaciones String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  empresa  Empresa @relation(fields: [idEmpresa], references: [id])
+  cliente  Cliente @relation(fields: [idCliente], references: [id])
+  detalles DetalleVenta[]
+  factura  Factura?
+
+  @@index([idEmpresa, estado])
+  @@index([idCliente])
+  @@map("venta")
+}
+
+model DetalleVenta {
+  id            String   @id @default(uuid())
+  idVenta       String
+  idProducto    String
+  cantidad      Decimal
+  precioUnitario Decimal
+  subtotal      Decimal
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  venta    Venta    @relation(fields: [idVenta], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [idProducto], references: [id])
+
+  @@index([idVenta])
+  @@map("detalle_venta")
+}
+
+model Factura {
+  id        String   @id @default(uuid())
+  idEmpresa String
+  idVenta   String   @unique
+  numero    String
+  fecha     DateTime @default(now())
+  total     Decimal
+  estado    EstadoGeneral @default(ACTIVO)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  empresa Empresa @relation(fields: [idEmpresa], references: [id])
+  venta   Venta   @relation(fields: [idVenta], references: [id])
+
+  @@unique([idEmpresa, numero])
+  @@index([idEmpresa])
+  @@map("factura")
+}
+
+model CuentaContable {
+  id        String   @id @default(uuid())
+  idEmpresa String
+  codigo    String
+  nombre    String
+  tipo      String?
+  nivel     Int?
+  idPadre   String?
+  estado    EstadoGeneral @default(ACTIVO)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  empresa         Empresa          @relation(fields: [idEmpresa], references: [id])
+  padre           CuentaContable?  @relation("CuentaHija", fields: [idPadre], references: [id])
+  hijas           CuentaContable[] @relation("CuentaHija")
+  detallesAsiento DetalleAsiento[]
+
+  @@unique([idEmpresa, codigo])
+  @@index([idEmpresa])
+  @@map("cuenta_contable")
+}
+
+model AsientoContable {
+  id          String   @id @default(uuid())
+  idEmpresa   String
+  fecha       DateTime @default(now())
+  descripcion String
+  referencia  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  empresa  Empresa          @relation(fields: [idEmpresa], references: [id])
+  detalles DetalleAsiento[]
+
+  @@index([idEmpresa, fecha])
+  @@map("asiento_contable")
+}
+
+model DetalleAsiento {
+  id               String   @id @default(uuid())
+  idAsiento        String
+  idCuentaContable String
+  tipo             TipoAsiento
+  monto            Decimal
+  descripcion      String?
+  createdAt        DateTime @default(now())
+
+  asiento AsientoContable @relation(fields: [idAsiento], references: [id], onDelete: Cascade)
+  cuenta  CuentaContable  @relation(fields: [idCuentaContable], references: [id])
+
+  @@index([idAsiento])
+  @@map("detalle_asiento")
+}
+
+model Empleado {
+  id          String   @id @default(uuid())
+  idEmpresa   String
+  nombre      String
+  apellido    String
+  email       String?
+  telefono    String?
+  idCargo     String?
+  fechaIngreso DateTime?
+  estado      EstadoGeneral @default(ACTIVO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  empresa Empresa @relation(fields: [idEmpresa], references: [id])
+  cargo   Cargo?  @relation(fields: [idCargo], references: [id])
+  registrosHoras RegistroHoras[]
+
+  @@index([idEmpresa])
+  @@map("empleado")
+}
+
+model Cargo {
+  id          String   @id @default(uuid())
+  idEmpresa   String
+  nombre      String
+  descripcion String?
+  salarioBase Decimal?
+  estado      EstadoGeneral @default(ACTIVO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  empresa   Empresa    @relation(fields: [idEmpresa], references: [id])
+  empleados Empleado[]
+
+  @@unique([idEmpresa, nombre])
+  @@index([idEmpresa])
+  @@map("cargo")
+}
+
+model Turno {
+  id         String   @id @default(uuid())
+  idEmpresa  String
+  nombre     String
+  horaInicio String
+  horaFin    String
+  estado     EstadoGeneral @default(ACTIVO)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  empresa Empresa @relation(fields: [idEmpresa], references: [id])
+  registrosHoras RegistroHoras[]
+
+  @@index([idEmpresa])
+  @@map("turno")
+}
+
+model RegistroHoras {
+  id              String   @id @default(uuid())
+  idEmpresa       String
+  idEmpleado      String
+  idTurno         String
+  fecha           DateTime
+  horaEntrada     DateTime
+  horaSalida      DateTime?
+  horasTrabajadas Decimal?
+  observaciones   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  empresa  Empresa  @relation(fields: [idEmpresa], references: [id])
+  empleado Empleado @relation(fields: [idEmpleado], references: [id])
+  turno    Turno    @relation(fields: [idTurno], references: [id])
+
+  @@index([idEmpresa, fecha])
+  @@index([idEmpleado, fecha])
+  @@map("registro_horas")
 }
