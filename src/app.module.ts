@@ -14,6 +14,19 @@ import { AlmacenModule } from './almacen/almacen.module';
 import { StockModule } from './stock/stock.module';
 import { MovimientoInventarioModule } from './movimiento-inventario/movimiento-inventario.module';
 import { LoteModule } from './lote/lote.module';
+import { BomModule } from './bom/bom.module';
+import { ProduccionModule } from './produccion/produccion.module';
+import { ProveedorModule } from './proveedor/proveedor.module';
+import { OrdenCompraModule } from './orden-compra/orden-compra.module';
+import { ClienteModule } from './cliente/cliente.module';
+import { VentaModule } from './venta/venta.module';
+import { CuentaContableModule } from './cuenta-contable/cuenta-contable.module';
+import { AsientoContableModule } from './asiento-contable/asiento-contable.module';
+import { EmpleadoModule } from './empleado/empleado.module';
+import { CargoModule } from './cargo/cargo.module';
+import { TurnoModule } from './turno/turno.module';
+import { RegistroHorasModule } from './registro-horas/registro-horas.module';
+import { ReportesModule } from './reportes/reportes.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AppController } from './app.controller';
@@ -22,19 +35,15 @@ import { AppService } from './app.service';
 @Module({
   imports: [
     PrismaModule,
-    AuthModule,
-    EmpresaModule,
-    UsuarioModule,
-    RolModule,
-    PermisoModule,
-    CategoriaModule,
-    UnidadMedidaModule,
-    MateriaPrimaModule,
-    ProductoModule,
-    AlmacenModule,
-    StockModule,
-    MovimientoInventarioModule,
-    LoteModule,
+    AuthModule, EmpresaModule, UsuarioModule, RolModule, PermisoModule,
+    CategoriaModule, UnidadMedidaModule, MateriaPrimaModule, ProductoModule,
+    AlmacenModule, StockModule, MovimientoInventarioModule, LoteModule,
+    BomModule, ProduccionModule,
+    ProveedorModule, OrdenCompraModule,
+    ClienteModule, VentaModule,
+    CuentaContableModule, AsientoContableModule,
+    EmpleadoModule, CargoModule, TurnoModule, RegistroHorasModule,
+    ReportesModule,
   ],
   controllers: [AppController],
   providers: [
