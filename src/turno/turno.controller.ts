@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { TurnoService } from './turno.service';
 import { CreateTurnoDto } from './dto/create-turno.dto';
@@ -15,6 +15,9 @@ export class TurnoController {
 
   @Get() @Roles('ADMINISTRADOR') @ApiOperation({ summary: 'Listar turnos' })
   findAll(@CurrentUser('idEmpresa') idEmpresa: string) { return this.service.findAll(idEmpresa); }
+
+  @Patch(':id') @Roles('ADMINISTRADOR') @ApiOperation({ summary: 'Actualizar turno' })
+  update(@Param('id') id: string, @CurrentUser('idEmpresa') idEmpresa: string, @Body() dto: any) { return this.service.update(id, idEmpresa, dto); }
 
   @Delete(':id') @Roles('ADMINISTRADOR') @ApiOperation({ summary: 'Eliminar turno' })
   remove(@Param('id') id: string, @CurrentUser('idEmpresa') idEmpresa: string) { return this.service.remove(id, idEmpresa); }

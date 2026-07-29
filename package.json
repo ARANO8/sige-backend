@@ -72,6 +72,9 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@prisma/engines", "@prisma/client", "prisma", "bcryptjs", "unrs-resolver"]
+  },
   "jest": {
     "moduleFileExtensions": [
       "js",

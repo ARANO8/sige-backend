@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmpleadoDto } from './dto/create-empleado.dto';
+import { UpdateEmpleadoDto } from './dto/update-empleado.dto';
 
 @Injectable()
 export class EmpleadoService {
@@ -27,6 +28,15 @@ export class EmpleadoService {
     });
     if (!item) throw new NotFoundException('Empleado no encontrado');
     return item;
+  }
+
+  async update(id: string, idEmpresa: string, dto: UpdateEmpleadoDto) {
+    await this.findOne(id, idEmpresa);
+    return this.prisma.empleado.update({
+      where: { id },
+      data: { ...dto, fechaIngreso: dto.fechaIngreso ? new Date(dto.fechaIngreso) : undefined },
+      include: { cargo: true },
+    });
   }
 
   async remove(id: string, idEmpresa: string) {
