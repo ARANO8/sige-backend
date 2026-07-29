@@ -79,6 +79,7 @@ model Empresa {
   facturas         Factura[]
   asientosContables AsientoContable[]
   registrosHoras   RegistroHoras[]
+  configuracionDashboard ConfiguracionDashboard?
 
   @@map("empresa")
 }
@@ -737,4 +738,17 @@ model RegistroHoras {
   @@index([idEmpresa, fecha])
   @@index([idEmpleado, fecha])
   @@map("registro_horas")
+}
+
+model ConfiguracionDashboard {
+  id           String   @id @default(uuid())
+  idEmpresa    String   @unique
+  kpisConfig   Json     @default("{}")
+  chartsConfig Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [idEmpresa], references: [id])
+
+  @@map("configuracion_dashboard")
 }
